@@ -52,12 +52,18 @@
 
 # TODO per entry Volume
 # TODO neues Tuple Dateiformat siehe: pickle und shelve
+# TODO Dafür sorgen, dass wenn ein Hotkey aufgenommen wird ab der Aufforderung dafür durch Doppelklick der Eintrag
+#  dafür registriert und weitergegeben wird an die funktion.
+#  damit nicht durch den wechseln der Auswahl in der Liste der falsche Eintrag überschrieben wird.
 #
 
-import vlc3 as vlc
-import keyboard  # , time
-from tkinter import filedialog
 from tkinter import *
+from tkinter import filedialog
+from tkinter import messagebox
+
+import os
+import keyboard  # , time
+import vlc3 as vlc
 
 if sys.hexversion >= 0x03010000:
     # use some advanced feature
@@ -66,7 +72,7 @@ else:
     print("Benutze python 3 :D")
     # use an alternative implementation or warn the user
 
-configurationsdatei = 'PYSB.config'
+konfigurationsdatei = 'PYSB.config'
 hk = []
 
 
@@ -95,7 +101,10 @@ class hotkeyerkennenDialog:
         self.top.destroy()
 
     def recordkey(self):
-        self.b.focus()  # habe den focus hier auf den button gesetzt, damit die registrierte tasteneingabe (eventueller einzelner buchstabe oder zahl nicht im eingabefeld landen kann. Praktisch könnte zudem auch sein, wenn dann gleich durch bestätigen mit enter der Dialog Bestätigt werden kann.)
+        self.b.focus()
+        # Ich habe den Fokus hier auf den button gesetzt, damit die registrierte Tasteneingabe
+        # (eventueller einzelner Buchstabe oder Zahl nicht im Eingabefeld landen kann. Praktisch könnte zudem
+        # auch sein, wenn dann gleich durch bestätigen mit Enter der Dialog bestätigt werden kann.)
         test = keyboard.read_hotkey(suppress=False)
 
         self.e.delete(0, END)
@@ -108,18 +117,20 @@ def play(hk):
         for i in hk:
             if i[1] == hotkeypressed:
                 media = root.instanz_vlc.media_new(i[0])
-#                print("mediavariable: " + str(media))
                 root.player.set_media(media)
                 root.player.play()
     except:
-        print(
-            "Variable " + hotkeypressed + " wurde nicht gefundenoder es ist etwas in der funktion 'def play(hk) schiefgelaufen'")
+        print("Variable " + hotkeypressed +
+              " wurde nicht gefunden oder es ist etwas in der Funktion 'def play(hk) schiefgelaufen'")
 
 
 def startlisten(hk):
-    for i in hk:
-        # test=keyboard.add_hotkey(i[1], lambda: play(hk))
-        root.listenkeyeventhandlerliste.append(keyboard.add_hotkey(i[1], lambda: play(hk)))
+    if root_checken() == "keinroot":
+        return
+    else:
+        for i in hk:
+            # test=keyboard.add_hotkey(i[1], lambda: play(hk))
+            root.listenkeyeventhandlerliste.append(keyboard.add_hotkey(i[1], lambda: play(hk)))
 
 
 def stoplisten():
@@ -188,20 +199,20 @@ def listboxenneuereintraghinzufuegen():
 
 
 def listenrechtsklick_hk(event):
-    y = str(str(event).split()[5]).strip(
-        "y=>")  # im event steht der die zur liste relative posizion des cursors beim click - die so herausgefiltert wird
+    y = str(str(event).split()[5]).strip("y=>")
+    # Im event steht die zur liste relative Position des Cursors beim Klick - die so herausgefiltert wird
     listenrechtsklick("hk", y)
 
 
 def listenrechtsklick_dn(event):
-    y = str(str(event).split()[5]).strip(
-        "y=>")  # im event steht der die zur liste relative posizion des cursors beim click - die so herausgefiltert wird
+    y = str(str(event).split()[5]).strip("y=>")
+    # Im event steht die zur liste relative Position des Cursors beim Klick - die so herausgefiltert wird
     listenrechtsklick("dn", y)
 
 
 def listenrechtsklick(liste, y):
-    auswahl = listbox_dn.nearest(
-        y)  # die nearest funktion gibts mit hilfe von y den eintrag an position y wieder (relative koordinate)
+    auswahl = listbox_dn.nearest(y)
+    # Die nearest Funktion gibt mit hilfe von y den Eintrag an Position y wieder (relative Koordinate)
     listenrechtsklick_play(listbox_dn.get(auswahl))
 
 
@@ -214,42 +225,42 @@ def listenrechtsklick_play(file):
 
 def listendoppelklick_hotkey(event):
     root.hotkeyAufnahme = "test"
-    d = hotkeyerkennenDialog(root)  # Dialog zum Hotkey Abfragen aufrufen
+    d = hotkeyerkennenDialog(root)  # Dialog zum Hotkey abfragen aufrufen
     root.wait_window(d.top)  # ^^^
-    if root.hotkeyAufnahme == "":  # wurde kein Hotkey im Dialog eingegeben?
-        print("hotkey wurde nicht aufgenommen/kein hotkey bekomen.")
+    if root.hotkeyAufnahme == "":  # Wurde kein Hotkey im Dialog eingegeben?
+        print("Hotkey wurde nicht aufgenommen/kein hotkey bekommen.")
     else:
-        auswahl = listbox_hk.curselection()[0]  # den ausgewählten eintrag in der listbox auslesen
-        listbox_hk.delete(auswahl)  # den eintrag in der liste austauschen
+        auswahl = listbox_hk.curselection()[0]  # Den ausgewählten Eintrag in der Listbox auslesen
+        listbox_hk.delete(auswahl)  # Den Eintrag in der Liste austauschen
         listbox_hk.insert(auswahl, root.hotkeyAufnahme)  # ^^^
-        if listbox_hk.size() == (auswahl + 1):  # Der Eintrag für ein neues Element in der Liste wurde geändert/gewaehlt
+        if listbox_hk.size() == (auswahl + 1):  # Der Eintrag für ein neues Element in der Liste wurde geändert/gewählt
             root.hotkeys.append(("", str(root.hotkeyAufnahme)))  # Einen neuen Eintrag in der Tuple anlegen
-            listbox_dn.delete(
-                auswahl)  # Eintrag in der Dateinamen Liste aktualisieren auf ein leeren inhalt (ist ja komplett neu)
+            listbox_dn.delete(auswahl)
+            # Eintrag in der Dateinamen Liste aktualisieren auf ein leeren Inhalt (ist ja komplett neu)
             listbox_dn.insert(auswahl, "")  # ^^^
-            listboxenneuereintraghinzufuegen()  # Neuen Platzhalter fuer hinzufuegen erstellen.
+            listboxenneuereintraghinzufuegen()  # Neuen Platzhalter für hinzufügen erstellen.
         else:
             root.hotkeys[auswahl] = ((root.hotkeys[auswahl][0]), str(
-                root.hotkeyAufnahme))  # die Tulpe/von der config gelesene liste auch aktualisieren
+                root.hotkeyAufnahme))  # Die Tuple von der config/gelesenen Liste auch aktualisieren
 
 
 def listendoppelklick_dateiname(event):
     auswahl = listbox_dn.curselection()[0]  # den ausgewählten eintrag in der listbox auslesen
     try:
         root.neuedatei = filedialog.askopenfilename(initialdir="~/", title="Eine Vlc kompatible Datei auswählen",
-                                                    filetypes=[("alle Dateien",
-                                                                "*.*")])  # "Audiodateien","*.mp3"),("all files","*.*")))     #(angabe aller audioformate wäre ganz schön mühsam, villeicht später # TODO)
+                                                    filetypes=[("alle Dateien","*.*")])
+        # TODO (Die angabe aller Audioformate wäre ganz schön mühsam - villeicht später)
         listbox_dn.delete(auswahl)  # Den Eintrag in der Liste austauschen
         listbox_dn.insert(auswahl, root.neuedatei)  # ^^^
-        if listbox_dn.size() == (auswahl + 1):  # Der Eintrag für ein neues Element in der Liste wurde geändert/gewaehlt
+        if listbox_dn.size() == (auswahl + 1):  # Der Eintrag für ein neues Element in der Liste wurde geändert/gewählt
             root.hotkeys.append((str(root.neuedatei), ""))  # Einen neuen Eintrag in der Tuple anlegen
             listbox_hk.delete(
-                auswahl)  # Eintrag in der Dateinamen Liste aktualisieren auf ein leeren inhalt (ist ja komplett neu)
+                auswahl)  # Eintrag in der Dateinamen Liste aktualisieren auf ein leeren Inhalt (ist ja komplett neu)
             listbox_hk.insert(auswahl, "")  # ^^^
-            listboxenneuereintraghinzufuegen()  # Neuen Platzhalter fuer hinzufuegen erstellen.
+            listboxenneuereintraghinzufuegen()  # Neuen Platzhalter für hinzufügen erstellen.
         else:
-            root.hotkeys[auswahl] = (
-            str(root.neuedatei), root.hotkeys[auswahl][1])  # die Tulpe/von der config gelesene liste auch aktualisieren
+            root.hotkeys[auswahl] = (str(root.neuedatei), root.hotkeys[auswahl][1])
+            # Die Tuple von der config/gelesene liste auch aktualisieren
     except:
         print("Es wurde keine Datei ausgewählt:")
 
@@ -270,11 +281,20 @@ def listendelete(auswahl):
         listbox_dn.delete(auswahl)
         del root.hotkeys[auswahl]
     else:
-        print("ähhh")
+        print("Die Liste ist schon leer oder ein anderes Problem")
 
 
-# TODO irgendwann entfernen? definition zum ausgeben der tuple im terminal
-def PRinttuple():
+def root_checken():
+    if os.geteuid() != 0:
+        # TODO hier funktion reinbringen:
+        print("noch nicht gemacht - kein root!! errormessage")
+        messagebox.showinfo("root Rechte", "Dir fehlen die root Rechte um die Überwachung zu starten.")
+        return "keinroot"
+        #raise ImportError('You must be root to use this library on linux.')
+
+
+# TODO irgendwann entfernen? definition zum ausgeben der tuple im Terminal
+def printtuple():
     for i in root.hotkeys:
         print(i[0])
         print(i[1])
@@ -286,40 +306,75 @@ if __name__ == '__main__':
 
     root.title("PySB - Python-Soundboard")
     root.hotkeys = readconfig("PYSB.config")
-    root.hotkeyAufnahme = "older shiiit xD"
+    root.hotkeyAufnahme = ""
     root.listenkeyeventhandlerliste = []
-    ################ top frame  [ Config / Speichern ]
+
+    # Frame mit [Laden] und [Speichern]
+    # ---------------------------------
     frame_saveandreload = Frame(root)
     frame_saveandreload.pack(side=TOP)
     reloadButton = Button(frame_saveandreload, text="Config neu Laden",
-                          command=lambda: reloadconfiganddisplay(configurationsdatei))
+                          command=lambda: reloadconfiganddisplay(konfigurationsdatei))
     saveButton = Button(frame_saveandreload, text="Speichern",
-                        command=lambda: writeconfig(configurationsdatei, root.hotkeys))
+                        command=lambda: writeconfig(konfigurationsdatei, root.hotkeys))
     reloadButton.pack(side=LEFT, padx=5, pady=5)
     saveButton.pack(side=RIGHT, padx=5, pady=5)
 
-    ################2ter frame  [ Listen ]
+    # Frame mit den Zwei Sub-Frames für Hotkeys und Dateinamen, sowie Volume Button
+    # -----------------------------------------------------------------------------
+    # TODO Frame mit Volume Button und weiteren zum Bearbeiten/anpassen -
+    #  evtl. UI Fenster zum anpassen von Hotkey und Dateinamen in einem.
     frame_listen = Frame(root)
-    frame_listen.pack(fill=BOTH, expand=1)  # side=TOP)
+    frame_listen.pack(fill=BOTH, expand=1)
 
+    # Frame mit der linken Liste (Hotkeys)
+    # ------------------------------------
     frame_listenleft = Frame(frame_listen, width=23)
-    frame_listenleft.pack(side=LEFT, fill=Y)  # , expand=1)
-
-    frame_listenright = Frame(frame_listen)
-    frame_listenright.pack(side=RIGHT, fill=BOTH, expand=1)
-
+    frame_listenleft.pack(side=LEFT, fill=Y)
     label_hk = Label(frame_listenleft, text="Shortcuts:")
-    listbox_hk = Listbox(frame_listenleft)  # , width=20          )
     label_hk.pack(side=TOP)
+    listbox_hk = Listbox(frame_listenleft)
     listbox_hk.pack(fill=Y, expand=1)
 
-    listbox_dn = Listbox(frame_listenright)  # , width=60          )
+    # Frame mit der mittleren?/rechten Liste (Dateinamen)
+    # ---------------------------------------------------
+    frame_listenright = Frame(frame_listen)
+    frame_listenright.pack(side=RIGHT, fill=BOTH, expand=1)
     label_dn = Label(frame_listenright, text="Dateinamen:")
     label_dn.pack(side=TOP)
+    listbox_dn = Listbox(frame_listenright)
     listbox_dn.pack(side=LEFT, fill=BOTH, expand=1)
 
-    #   listbox_hk.grid(     row=1, column=0, fill=Y   , expand=1)
-    #   listbox_dn.grid(     row=1, column=1, fill=BOTH, expand=1)
+    label_editinfo = Label(root,
+                           text='(Zum editieren "Doppelklicken"         ' +
+                                'Zum Löschen [entf] drücken     ' +
+                                'Rechtsklick zum abspielen)')
+    label_editinfo.pack()
+
+    # Frame für den allgemeinen Lautstärkeregler
+    # ------------------------------------------
+    frame_volume = Frame(root)
+    frame_volume.pack(fill=X)
+    label_volume = Label(frame_volume, text="Lautsärke:")
+    label_volume.pack(side=LEFT, padx=10)
+    volslider = Scale(frame_volume, command=volumeset, from_=0, to=100, orient=HORIZONTAL, length=600)
+    volslider.pack(side=LEFT, fill=X, expand=1)
+
+    # Frame für das starten/Stopppen der Überwachung
+    # ----------------------------------------------
+    frame_ueberwachung = Frame(root)
+    frame_ueberwachung.pack(fill=X)
+    label_ueberwachung = Label(frame_ueberwachung, text="Shortcut- Überwachung: ")
+    label_ueberwachung.pack(side=LEFT)
+    button_ueberw_start = Button(frame_ueberwachung, text='starten', command=lambda: startlisten(root.hotkeys))
+    button_ueberw_start.pack(side=LEFT, padx=5, pady=5)
+    button_ueberw_stop = Button(frame_ueberwachung, text='stoppen', command=lambda: stoplisten())
+    button_ueberw_stop.pack(side=LEFT, padx=5, pady=5)
+    button_ueberw_quit = Button(frame_ueberwachung, text='Quit', command=root.quit)
+    button_ueberw_quit.pack(side=RIGHT, padx=5, pady=5)
+
+    # Funktionen einbinden
+    # --------------------
     listbox_hk.bind('<Button-3>', listenrechtsklick_hk)
     listbox_hk.bind('<Double-Button-1>', listendoppelklick_hotkey)
     listbox_hk.bind('<Delete>', listendeletekey_hotkey)
@@ -327,37 +382,24 @@ if __name__ == '__main__':
     listbox_dn.bind('<Double-Button-1>', listendoppelklick_dateiname)
     listbox_dn.bind('<Delete>', listendeletekey_dateiname)
 
+    # Listen befüllen
+    # ---------------
     configinlistenladen()
-    label_editinfo = Label(root,
-                           text='(Zum editieren "doppelklicken"         Zum Löschen [entf] drücken     Rechtsklick zum abspielen)')
-    label_editinfo.pack()
 
-    frame_volume = Frame(root)
-    frame_volume.pack(fill=X)
-    label_volume = Label(frame_volume, text="Lautsärke:")
-    volslider = Scale(frame_volume, command=volumeset,
-                      from_=0, to=100, orient=HORIZONTAL, length=600)
-    label_volume.pack(side=LEFT, padx=10)
-    volslider.pack(side=LEFT, fill=X, expand=1)
-    ########################   [ listen start/stop  / Quit]
-    b1 = Button(root, text='shortcutüberwachung starten', command=lambda: startlisten(root.hotkeys))
-    b2 = Button(root, text='shortcutüberwachung stoppen', command=lambda: stoplisten())
-    b3 = Button(root, text='Quit', command=root.quit)
-    b1.pack(side=LEFT, padx=5, pady=5)
-    b2.pack(side=LEFT, padx=5, pady=5)
-    b3.pack(side=LEFT, padx=5, pady=5)
-
-    #######################   [ Vlc player - ini?! ] ########################################
+    # ######################   [ Vlc player - ini?! ] ########################################
+    # Den Vlc Player Initialisieren (für nur eine Instanz)
+    # ----------------------------------------------------
+    # TODO evtl. mehrere Instanzen ermöglichen, die parallel gestartet werden mit einer Ansicht was gerade geladen ist?
     root.instanz_vlc = vlc.Instance()
     root.player = root.instanz_vlc.media_player_new()
     # set the volume slider to the current volume
     # self.volslider.SetValue(self.player.audio_get_volume() / 2)
     volslider.set(root.player.audio_get_volume())
 
-    ##### below is a test, now use the File->Open file menu   #### kopiert :-)
-    #####media = self.Instance.media_new('output.mp4')
-    #####self.player.set_media(media)
-    #####self.player.play() # hit the player button
-    #####self.player.video_set_deinterlace(str_to_bytes('yadif'))
+    # #### below is a test, now use the File->Open file menu   #### kopiert :-)
+    # ####media = self.Instance.media_new('output.mp4')
+    # ####self.player.set_media(media)
+    # ####self.player.play() # hit the player button
+    # ####self.player.video_set_deinterlace(str_to_bytes('yadif'))
 
     root.mainloop()
