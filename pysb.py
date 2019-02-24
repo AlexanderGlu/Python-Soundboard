@@ -247,8 +247,13 @@ def listendoppelklick_hotkey(event):
 def listendoppelklick_dateiname(event):
     auswahl = listbox_dn.curselection()[0]  # den ausgewählten eintrag in der listbox auslesen
     try:
+        root.neuedatei=""
         root.neuedatei = filedialog.askopenfilename(initialdir="~/", title="Eine Vlc kompatible Datei auswählen",
-                                                    filetypes=[("alle Dateien","*.*")])
+                                                filetypes=[("alle Dateien","*.*")])
+    except:
+        print("Es wurde keine Datei ausgewählt:")
+    if not (len(root.neuedatei) == 0):
+        print("es wurde eine neue datei übergeben! Shreeek! :" + str(root.neuedatei))
         # TODO (Die angabe aller Audioformate wäre ganz schön mühsam - villeicht später)
         listbox_dn.delete(auswahl)  # Den Eintrag in der Liste austauschen
         listbox_dn.insert(auswahl, root.neuedatei)  # ^^^
@@ -261,8 +266,6 @@ def listendoppelklick_dateiname(event):
         else:
             root.hotkeys[auswahl] = (str(root.neuedatei), root.hotkeys[auswahl][1])
             # Die Tuple von der config/gelesene liste auch aktualisieren
-    except:
-        print("Es wurde keine Datei ausgewählt:")
 
 
 def listendeletekey_hotkey(event):
