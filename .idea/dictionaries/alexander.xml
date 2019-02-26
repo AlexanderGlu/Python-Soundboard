@@ -19,6 +19,7 @@
       <w>aufgenommen</w>
       <w>aufnahme</w>
       <w>aufrufen</w>
+      <w>aufzunehmen</w>
       <w>ausgeben</w>
       <w>ausgewählt</w>
       <w>ausgewählten</w>
@@ -57,6 +58,7 @@
       <w>einträgen</w>
       <w>einzelner</w>
       <w>entfernen</w>
+      <w>erkannt</w>
       <w>erkannter</w>
       <w>erkennen</w>
       <w>ermöglichen</w>
@@ -74,6 +76,7 @@
       <w>geladen</w>
       <w>gelesene</w>
       <w>gelesenen</w>
+      <w>genutzt</w>
       <w>gerade</w>
       <w>gesetzt</w>
       <w>gestartet</w>
@@ -105,6 +108,7 @@
       <w>koordinate</w>
       <w>könnte</w>
       <w>landen</w>
+      <w>lautstärke</w>
       <w>lautstärkeregler</w>
       <w>lautsärke</w>
       <w>leeren</w>
@@ -122,6 +126,7 @@
       <w>platzhalter</w>
       <w>praktisch</w>
       <w>pysb</w>
+      <w>rechte</w>
       <w>rechtsklick</w>
       <w>registriert</w>
       <w>registrierte</w>
@@ -129,12 +134,15 @@
       <w>schon</w>
       <w>schön</w>
       <w>sein</w>
+      <w>setzen</w>
       <w>siehe</w>
       <w>sorgen</w>
       <w>speichern</w>
       <w>später</w>
       <w>steht</w>
       <w>tasteneingabe</w>
+      <w>versuchen</w>
+      <w>verwendet</w>
       <w>villeicht</w>
       <w>wechseln</w>
       <w>weiteren</w>
