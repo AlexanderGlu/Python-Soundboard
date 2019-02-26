@@ -28,5 +28,4 @@ sudo apt install vlc
 - Wenn die Dateipfade zu lang werden kann man nur noch den Anfang lesen: Scrollbalken wären noch gut
 - Es wird noch nicht berücksichtigt, dass die Config-Datei nicht da sein könnte
 - Die Shortcuts, die ins Eingabefeld eingegeben werden können (direkt) werden noch nicht gegengecheckt.
-- Evtl. könnte es funktionieren, dass man den Fokus in den Listen verändern kann, während der Dialog zum Shortcut aufnehmen offen ist.
 - Sicher noch einiges mehr.
