@@ -50,15 +50,13 @@
 # evtl. python-argparse für Kommandozeilen Interpretierung
 # python-regex
 
-# TODO neues Tuple Dateiformat siehe: pickle und shelve
-#
-
 from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
 
-import os, shelve, math
-import keyboard  # , time
+import os
+import configparser
+import keyboard
 import vlc3 as vlc
 
 if sys.hexversion >= 0x03010000:
@@ -68,14 +66,12 @@ else:
     print("Benutze python 3 :D")
     # use an alternative implementation or warn the user
 
-konfigurationsdatei = 'PYSB.shelv.config'
+konfigurationsdatei = 'PYSB.ini'
 hk = []
-
-
 # ----------------- Tk- Dialog --------------------
-# TODO löschen von Einträgen
 
-class volumeErkennenDialog:
+
+class VolumeErkennenDialog:
     def __init__(self, parent):
         top = self.top = Toplevel(parent)
         top.title("Lautstärke angeben")
@@ -88,31 +84,35 @@ class volumeErkennenDialog:
         self.buttonexit.pack(side=BOTTOM)
         self.volentry.delete(0, END)
         self.volentry.insert(0, str(root.einzelvol))
-        print("volume-scale menüaufbau..")
-        print(root.einzelvol)
         self.slider_senkr.set(int(root.einzelvol))
         self.volentry.bind('<Return>', self.refreshscale)
         self.volentry.bind('<FocusOut>', self.refreshscale)
 
-
     def buttonexitaction(self):
-        print("--" + str(self.slider_senkr.get()) + "--" + str(self.volentry.get()))
         if str(self.slider_senkr.get()) == str(self.volentry.get()):
             self.quit()
-        root.einzelvol = self.volentry.get()
+        try:
+            root.einzelvol = int(self.volentry.get())
+        except ValueError:
+            print("Das eingegebene Volume konnte nicht gesetzt werden (ValueError)")
+            self.volentry.delete(0, END)
+            self.volentry.insert(0, self.slider_senkr.get())
         self.quit()
-
 
     def refreshscale(self, event):
         try:
             self.slider_senkr.set(int(self.volentry.get()))
-        except:
-            print("Das eingegebene Volume konnte nicht gesetzt werden")
-
+        except TclError:
+            print("Das eingegebene Volume konnte nicht gesetzt werden (TclError)")
+            self.volentry.delete(0, END)
+            self.volentry.insert(0, self.slider_senkr.get())
+        except ValueError:
+            print("Das eingegebene Volume konnte nicht gesetzt werden (ValueError)")
+            self.volentry.delete(0, END)
+            self.volentry.insert(0, self.slider_senkr.get())
 
     def volume_set(self, vol):
         root.einzelvol = int(vol)
-        print("test" + str(vol))
         self.volentry.delete(0, END)
         self.volentry.insert(0, str(vol))
 
@@ -120,10 +120,10 @@ class volumeErkennenDialog:
         self.top.destroy()
 
 
-class hotkeyerkennenDialog:
+class HotkeyErkennenDialog:
     def __init__(self, parent):
         top = self.top = Toplevel(parent)
-        top.title("Hotkey eingeben") # klappts?? TODO testen oder entfernen
+        top.title("Hotkey eingeben")
 
         self.frameLabel = Frame(top)
         self.frameLabel.pack(pady=5, padx=5)
@@ -154,10 +154,10 @@ class hotkeyerkennenDialog:
             self.e.insert(0, test)
 
 
-def play(hk):
+def play(hkvar):
     try:
         hotkeypressed = keyboard.get_hotkey_name()
-        for i in hk:
+        for i in hkvar:
             if i[1] == hotkeypressed:
                 media = root.instanz_vlc.media_new(i[0])
                 root.player.set_media(media)
@@ -168,12 +168,11 @@ def play(hk):
               " wurde nicht gefunden oder es ist etwas in der Funktion 'def play(hk) schiefgelaufen'")
 
 
-def startlisten(hk):
+def startlisten(hkvar):
     if root_checken() == "keinroot":
         return
     else:
-        for i in hk:
-            # test=keyboard.add_hotkey(i[1], lambda: play(hk))
+        for i in hkvar:
             root.listenkeyeventhandlerliste.append(keyboard.add_hotkey(i[1], lambda: play(hk)))
 
 
@@ -190,96 +189,85 @@ def volumeset(event):
         volume = 100
     root.mastervolume = volume
     volumesetplayer(root.aktuelles_einzelvolume)
-    # TODO hier muss noch volumesetplayer aufgerufen werden.
+
 
 def calcvolume(einzelvolume, mastervolume):
-    #print("\nErrechne ziellautstärke")
-    #print("Einzelvolume/Dateivolume: " + str(einzelvolume))
-    #print("Mastervolume            : " + str(mastervolume))
     if einzelvolume == 0:
         return 0
     if mastervolume == 0:
         return 0
-    volumeergebnis = (float(einzelvolume)*(float(mastervolume) / 100 ))
-    #print("Zielvolume:             : " + str(volumeergebnis))
+    volumeergebnis = (float(einzelvolume)*(float(mastervolume) / 100))
     return volumeergebnis
 
 
 def volumesetplayer(einzelvolume):
-    if root.player == None:
+    if root.player is None:
         return
     volume = int(calcvolume(einzelvolume, root.mastervolume))
-    #print("Zurückgegebene Lautstärke als int: " + str(int(volume)))
     if volume > 100:
         volume = 100
     if root.player.audio_set_volume(volume) == -1:
-        print('schschschsch... self.errorDialog("Failed to set volume")')
+        print('Konnte die Lautstärke nicht anpassen')
 
 
 def readconfig(configdatei):
-    try:
-        with shelve.open(configdatei) as shelvefile:
-            hk = shelvefile["hk"]
-            root.mastervolume = shelvefile["mastervolume"]
-        shelvefile.close()
-    except:
-        print("Beim laden gab es irgendeinen Fehler")
-    #alter code:
-    # lauf = 0
-    # hk = []
-    # zeile1_pfad = ""
-    # zeile2_hk = ""
-    # with open(configdatei, "r") as configuration:
-    #     for i in configuration:
-    #         lauf = lauf + 1
-    #         if lauf == 1:
-    #             zeile1_pfad = i.strip()
-    #         elif lauf == 2:
-    #             zeile2_hk = i.strip()
-    #             volumestandardwert=15
-    #             # TODO alles von alt- auf neu umbauen was shelve betriff/datei laden/speichern + converter..
-    #             # TODO configconverter erstellen - mit erkennung einer "alten configdatei" sowie anschließendem
-    #             #   löschen
-    #             hk.append((zeile1_pfad, zeile2_hk, volumestandardwert))
-    #             lauf = 0
-    #     configuration.close()
-    return hk
+    hkvar = []
+    config = configparser.ConfigParser()
+    config.read(str(configdatei))
+    if 'Einstellungen' in config.sections():
+        root.mastervolume = 0
+        root.mastervolume = int(config['Einstellungen']['mastervolume'])
+        print(root.mastervolume)
+    else:
+        print("Keine Lautstärkeeinstellung in der Konfiguration gefunden")
+    count = 1
+    if not (str('Hotkeyconfig' + str(count)) in config.sections()):
+        print("Kein [Hotkeyconfig1] in '" + configdatei + "' gefunden")
+    while str('Hotkeyconfig' + str(count)) in config:
+        # -----------------------------------------------------------------------
+        #               Dateiname Laden
+        try:
+            dateiname = config[str('Hotkeyconfig' + str(count))]['Dateiname']
+        except KeyError:
+            print("Keinen Dateinamen unter " + str('Hotkeyconfig' + str(count)) + " gefunden")
+            dateiname = ""
+        # -----------------------------------------------------------------------
+        #               Hotkey Laden
+        try:
+            hotkey = config[str('Hotkeyconfig' + str(count))]['Hotkey']
+        except KeyError:
+            print("Keinen Hotkey unter " + str('Hotkeyconfig' + str(count)) + " gefunden")
+            hotkey = ""
+        # -----------------------------------------------------------------------
+        #               Lautstärke Laden
+        try:
+            volume = int(config[str('Hotkeyconfig' + str(count))]['Volume'])
+        except KeyError:
+            print("Keinen Lautstärkeeintrag unter " + str('Hotkeyconfig' + str(count)) + " gefunden")
+            volume = ""
+        hkvar.append([dateiname, hotkey, volume])
+        count = count + 1
+    return hkvar
 
 
 def reloadconfiganddisplay(configdatei):
     root.hotkeys = readconfig(configdatei)
     configinlistenladen()
-    # TODO shelve test:
-    # cd=str(configdatei) + ".shelve"
-    # with shelve.open(cd) as shelvefile:
-    #     hhkk=shelvefile["hk"]
-    # shelvefile.close()
-    # print("shelvefileinhalt:")
-    # print(hhkk)
-    # print("vs ori:")
-    # print(root.hotkeys)
 
 
-def writeconfig(configdatei, hk):
-    with shelve.open(configdatei) as shelvefile:
-        shelvefile["hk"] = hk
-        print("mastervolume soll gespeichert werden: " + str(root.mastervolume))
-        shelvefile["mastervolume"] = root.mastervolume
-    shelvefile.close()
-    # with open(configdatei, "w") as configuration:
-    #     for i in hk:
-    #         configuration.write(i[0])
-    #         configuration.write("\n")
-    #         configuration.write(i[1])
-    #         configuration.write("\n")
-    #     configuration.close()
-
-
-# def writeconfig_new_shelve(configdatei, hk):
-#     cd=str(configdatei) + ".shelve"
-#     with shelve.open(cd,) as shelvefile:
-#         shelvefile["hk"] = hk
-#     shelvefile.close()
+def writeconfig(configdatei, hkvar):
+    config = configparser.ConfigParser()
+    config['Einstellungen'] = {'mastervolume': str(root.mastervolume)}
+    count = 0
+    for i in hkvar:
+        count = count + 1
+        config[str('Hotkeyconfig' + str(count))] = {
+            'Dateiname': str(i[0]),
+            'Hotkey': str(i[1]),
+            'Volume': str(i[2])
+        }
+    with open(configdatei, 'w') as cfgfile:
+        config.write(cfgfile)
 
 
 def configinlistenladen():
@@ -304,24 +292,25 @@ def listboxenneuereintraghinzufuegen():
 def listenrechtsklick_hk(event):
     y = str(str(event).split()[5]).strip("y=>")
     # Im event steht die zur liste relative Position des Cursors beim Klick - die so herausgefiltert wird
-    listenrechtsklick("hk", y)
+    listenrechtsklick(y)
 
 
 def listenrechtsklick_dn(event):
     y = str(str(event).split()[5]).strip("y=>")
     # Im event steht die zur liste relative Position des Cursors beim Klick - die so herausgefiltert wird
-    listenrechtsklick("dn", y)
+    listenrechtsklick(y)
 
 
 def listenrechtsklick_vol(event):
     y = str(str(event).split()[5]).strip("y=>")
     # Im event steht die zur liste relative Position des Cursors beim Klick - die so herausgefiltert wird
-    listenrechtsklick("vol", y)
+    listenrechtsklick(y)
 
-def listenrechtsklick(liste, y):
+
+def listenrechtsklick(y):
     auswahl = listbox_dn.nearest(y)
     # Die nearest Funktion gibt mit hilfe von y den Eintrag an Position y wieder (relative Koordinate)
-    file=(listbox_dn.get(auswahl), listbox_vol.get(auswahl))
+    file = (listbox_dn.get(auswahl), listbox_vol.get(auswahl))
     listenrechtsklick_play(file)
 
 
@@ -330,7 +319,7 @@ def listenrechtsklick_play(file):
         media = root.instanz_vlc.media_new(file[0])
         print(file[1])
         volumesetplayer(file[1])
-        root.aktuelles_einzelvolume=file[1]
+        root.aktuelles_einzelvolume = file[1]
         root.player.set_media(media)
         root.player.play()
 
@@ -338,7 +327,7 @@ def listenrechtsklick_play(file):
 def listendoppelklick_hotkey(event):
     auswahl = listbox_hk.curselection()[0]  # Den ausgewählten Eintrag in der Listbox auslesen
     root.hotkeyAufnahme = "test"
-    d = hotkeyerkennenDialog(root)  # Dialog zum Hotkey abfragen aufrufen
+    d = HotkeyErkennenDialog(root)  # Dialog zum Hotkey abfragen aufrufen
     root.wait_window(d.top)  # ^^^
     if root.hotkeyAufnahme == "":  # Wurde kein Hotkey im Dialog eingegeben?
         print("Hotkey wurde nicht aufgenommen/kein hotkey bekommen.")
@@ -346,12 +335,12 @@ def listendoppelklick_hotkey(event):
         listbox_hk.delete(auswahl)  # Den Eintrag in der Liste austauschen
         listbox_hk.insert(auswahl, root.hotkeyAufnahme)  # ^^^
         if listbox_hk.size() == (auswahl + 1):  # Der Eintrag für ein neues Element in der Liste wurde geändert/gewählt
-            root.hotkeys.append(("", str(root.hotkeyAufnahme), 15))  # Einen neuen Eintrag in der Tuple anlegen
+            root.hotkeys.append(["", str(root.hotkeyAufnahme), 15])  # Einen neuen Eintrag in der Tuple anlegen
             listbox_dn.delete(auswahl)
             listbox_vol.delete(auswahl)
             # Eintrag in der Dateinamen Liste aktualisieren auf ein leeren Inhalt (ist ja komplett neu)
             listbox_dn.insert(auswahl, "")  # ^^^
-            listbox_vol.insert(auswahl,15)  # ^^^
+            listbox_vol.insert(auswahl, 15)  # ^^^
             listboxenneuereintraghinzufuegen()  # Neuen Platzhalter für hinzufügen erstellen.
         else:
             root.hotkeys[auswahl] = ((root.hotkeys[auswahl][0]), str(root.hotkeyAufnahme), root.hotkeys[auswahl][2])
@@ -361,9 +350,9 @@ def listendoppelklick_hotkey(event):
 def listendoppelklick_dateiname(event):
     auswahl = listbox_dn.curselection()[0]  # den ausgewählten eintrag in der listbox auslesen
     try:
-        root.neuedatei=""
+        root.neuedatei = ""
         root.neuedatei = filedialog.askopenfilename(initialdir="~/", title="Eine Vlc kompatible Datei auswählen",
-                                                filetypes=[("alle Dateien","*.*")])
+                                                    filetypes=[("alle Dateien", "*.*")])
     except:
         print("Es wurde keine Datei ausgewählt:")
     if not (len(root.neuedatei) == 0):
@@ -371,7 +360,7 @@ def listendoppelklick_dateiname(event):
         listbox_dn.delete(auswahl)  # Den Eintrag in der Liste austauschen
         listbox_dn.insert(auswahl, root.neuedatei)  # ^^^
         if listbox_dn.size() == (auswahl + 1):  # Der Eintrag für ein neues Element in der Liste wurde geändert/gewählt
-            root.hotkeys.append((str(root.neuedatei), "", 15))  # Einen neuen Eintrag in der Tuple anlegen
+            root.hotkeys.append([str(root.neuedatei), "", 15])  # Einen neuen Eintrag in der Tuple anlegen
             listbox_hk.delete(auswahl)
             listbox_vol.delete(auswahl)
             # Eintrag in der Dateinamen Liste aktualisieren auf ein leeren Inhalt (ist ja komplett neu)
@@ -386,16 +375,15 @@ def listendoppelklick_dateiname(event):
 def listendoppelklick_volume(event):
     auswahl = listbox_vol.curselection()[0]
     root.einzelvol = listbox_vol.get(auswahl)
-    volDialog = volumeErkennenDialog(root)  # dialogaufbau
-    root.wait_window(volDialog.top)  # warten auf dialog
+    vol_dialog = VolumeErkennenDialog(root)  # Dialogaufbau
+    root.wait_window(vol_dialog.top)  # Warten auf den Dialog
 
     listbox_vol.delete(auswahl)
     listbox_vol.insert(auswahl, root.einzelvol)
 
-    temp= root.hotkeys[auswahl]
+    temp = root.hotkeys[auswahl]
     del root.hotkeys[auswahl]
-    root.hotkeys.insert(auswahl, (temp[0], temp[1], root.einzelvol))
-
+    root.hotkeys.insert(auswahl, [temp[0], temp[1], root.einzelvol])
 
 
 def listendeletekey_hotkey(event):
@@ -428,20 +416,12 @@ def root_checken():
         messagebox.showinfo("root Rechte", "Dir fehlen die root Rechte um die Überwachung zu"
                                            " starten oder einen Hotkey aufzunehmen (manuelle Eingabe möglich).")
         return "keinroot"
-        #raise ImportError('You must be root to use this library on linux.')
-
-
-# TODO irgendwann entfernen? definition zum ausgeben der tuple im Terminal
-def printtuple():
-    for i in root.hotkeys:
-        print(i[0])
-        print(i[1])
-        print("\n")
 
 
 def setslider(event):
     volslider.set(int(root.mastervolume))
-    # hacky mc hack hack :) wird nur genutzt um beim start den scale (volume) zu laden
+    # hacky mc hack hack :) wird nur genutzt um beim Start den scale (volume) Wert zu laden
+
 
 if __name__ == '__main__':
     root = Tk()
@@ -474,12 +454,20 @@ if __name__ == '__main__':
 
     # Frame mit der linken Liste (Hotkeys)
     # ------------------------------------
-    frame_listenleft = Frame(frame_listen, width=23)
-    frame_listenleft.pack(side=LEFT, fill=Y)
-    label_hk = Label(frame_listenleft, text="Shortcuts:")
+    frame_listen_hk = Frame(frame_listen, width=43)
+    frame_listen_hk.pack(side=LEFT, fill=Y)
+    label_hk = Label(frame_listen_hk, text="Shortcuts:")
     label_hk.pack(side=TOP)
-    listbox_hk = Listbox(frame_listenleft)
-    listbox_hk.pack(fill=Y, expand=1)
+    frame_listen_hk_mitte = Frame(frame_listen_hk)
+    frame_listen_hk_mitte.pack(side=TOP, fill=Y, expand=1)
+    listbox_hk = Listbox(frame_listen_hk_mitte)
+    listbox_hk.pack(side=LEFT, fill=Y, expand=1)
+    scrollbar_hk_ve = Scrollbar(frame_listen_hk_mitte, orient=VERTICAL)
+    scrollbar_hk_ve.pack(side=LEFT, fill=Y)
+    scrollbar_hk_ve.configure(command=listbox_hk.yview)
+    scrollbar_hk_ho = Scrollbar(frame_listen_hk, orient=HORIZONTAL)
+    scrollbar_hk_ho.pack(side=TOP, fill=X)
+    scrollbar_hk_ho.configure(command=listbox_hk.xview)
 
     # Frame mit der Dateinamen Liste
     # ------------------------------
@@ -487,18 +475,28 @@ if __name__ == '__main__':
     frame_listen_dn.pack(side=LEFT, fill=BOTH, expand=1)
     label_dn = Label(frame_listen_dn, text="Dateinamen:")
     label_dn.pack(side=TOP)
-    listbox_dn = Listbox(frame_listen_dn)
+    frame_listen_dn_mitte = Frame(frame_listen_dn)
+    frame_listen_dn_mitte.pack(side=TOP, fill=BOTH, expand=1)
+    listbox_dn = Listbox(frame_listen_dn_mitte)
     listbox_dn.pack(side=LEFT, fill=BOTH, expand=1)
+    scrollbar_dn_ve = Scrollbar(frame_listen_dn_mitte, orient=VERTICAL)
+    scrollbar_dn_ve.pack(side=LEFT, fill=Y)
+    scrollbar_dn_ve.configure(command=listbox_dn.yview)
+    scrollbar_dn_ho = Scrollbar(frame_listen_dn, orient=HORIZONTAL)
+    scrollbar_dn_ho.pack(side=TOP, fill=X)
+    scrollbar_dn_ho.configure(command=listbox_dn.xview)
 
     # Frame mit der Volume Liste
     # --------------------------
-    frame_liste_volume = Frame(frame_listen)
+    frame_liste_volume = Frame(frame_listen, width=7)
     frame_liste_volume.pack(side=RIGHT, fill=Y)
     label_vol = Label(frame_liste_volume, text="Vol.")
     label_vol.pack(side=TOP)
-    listbox_vol = Listbox(frame_liste_volume, width=5)
+    scrollbar_vol_ve = Scrollbar(frame_liste_volume, orient=VERTICAL)
+    scrollbar_vol_ve.pack(side=RIGHT, fill=Y)
+    listbox_vol = Listbox(frame_liste_volume, width=7)
     listbox_vol.pack(side=RIGHT, fill=Y, expand=1)
-
+    scrollbar_vol_ve.configure(command=listbox_vol.yview)
 
     label_editinfo = Label(root,
                            text='(Zum editieren "Doppelklicken"         ' +
@@ -512,7 +510,7 @@ if __name__ == '__main__':
     frame_volume.pack(fill=X)
     label_volume = Label(frame_volume, text="Lautsärke:")
     label_volume.pack(side=LEFT, padx=10)
-    volslider = Scale(frame_volume, command=volumeset, from_=0, to=100, orient=HORIZONTAL, length=600)  #, variable=scalevar)
+    volslider = Scale(frame_volume, command=volumeset, from_=0, to=100, orient=HORIZONTAL, length=600)
     volslider.pack(side=LEFT, fill=X, expand=1)
 
     # Frame für das starten/Stopppen der Überwachung
@@ -552,13 +550,6 @@ if __name__ == '__main__':
     root.instanz_vlc = vlc.Instance()
     root.player = root.instanz_vlc.media_player_new()
     # set the volume slider to the current volume
-    # self.volslider.SetValue(self.player.audio_get_volume() / 2)
     volslider.set(root.player.audio_get_volume())
-
-    # #### below is a test, now use the File->Open file menu   #### kopiert :-)
-    # ####media = self.Instance.media_new('output.mp4')
-    # ####self.player.set_media(media)
-    # ####self.player.play() # hit the player button
-    # ####self.player.video_set_deinterlace(str_to_bytes('yadif'))
 
     root.mainloop()
