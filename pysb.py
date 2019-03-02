@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# ***********************************************************************************************************************
+# *********************************************************************************************************************
 #    This file is part of PYSB Python Soundboard.
 #
 #    Authors: Tim H. <contact at https://discord.gg/8hRXDnM (TuxPlayDE#6693), https://www.twitch.tv/tuxplayde>
@@ -18,37 +18,13 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with PYSB Python Soundboard.  If not, see <http://www.gnu.org/licenses/>.
-# ***********************************************************************************************************************
+# *********************************************************************************************************************
 
-# #############################################################
+# *************************************************************
 #    Python Modul nachinstallieren: 'pip install keyboard'
-# #############################################################
+# *************************************************************
 
-# ---    keyboard.get_hotkey_name(names=None)
-# ---
-# ---[source]
-# ---
-# ---Returns a string representation of hotkey from the given key names, or
-# ---the currently pressed keys if not given. This function:
-# ---
-# ---    normalizes names;
-# ---    removes "left" and "right" prefixes;
-# ---    replaces the "+" key name with "plus" to avoid ambiguity;
-# ---    puts modifier keys first, in a standardized order;
-# ---    sort remaining keys;
-# ---    finally, joins everything with "+".
-# ---
-# ---Example:
-# ---
-# ---get_hotkey_name(['+', 'left ctrl', 'shift'])
-# ---# "ctrl+shift+plus"
-# ---
-# ---
-# ---    print(hotkeypressed[0])
-# ---    print(hotkeypressed)
-
-# evtl. python-argparse für Kommandozeilen Interpretierung
-# python-regex
+# TODO evtl. python-argparse für Kommandozeilen Interpretierung
 
 from tkinter import *
 from tkinter import filedialog
@@ -59,15 +35,9 @@ import configparser
 import keyboard
 import vlc3 as vlc
 
-if sys.hexversion >= 0x03010000:
-    # use some advanced feature
-    print("Deine Version passt.")
-else:
-    print("Benutze python 3 :D")
-    # use an alternative implementation or warn the user
-
 konfigurationsdatei = 'PYSB.ini'
 hk = []
+
 # ----------------- Tk- Dialog --------------------
 
 
@@ -217,7 +187,6 @@ def readconfig(configdatei):
     if 'Einstellungen' in config.sections():
         root.mastervolume = 0
         root.mastervolume = int(config['Einstellungen']['mastervolume'])
-        print(root.mastervolume)
     else:
         print("Keine Lautstärkeeinstellung in der Konfiguration gefunden")
     count = 1
@@ -279,7 +248,6 @@ def configinlistenladen():
         listbox_hk.insert(END, str(i[1]))
         listbox_vol.insert(END, str(i[2]))
     listboxenneuereintraghinzufuegen()
-    print("mastervolume soll gesetzt werden: " + str(int(root.mastervolume)))
     volslider.set(int(root.mastervolume))
 
 
@@ -317,7 +285,6 @@ def listenrechtsklick(y):
 def listenrechtsklick_play(file):
     if file[0] != "Neuer Eintrag...":
         media = root.instanz_vlc.media_new(file[0])
-        print(file[1])
         volumesetplayer(file[1])
         root.aktuelles_einzelvolume = file[1]
         root.player.set_media(media)

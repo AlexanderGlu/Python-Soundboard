@@ -24,8 +24,5 @@ sudo apt install vlc
 
 #### Was noch anzupassen ist:
 - Alles etwas schöner/professioneller machen :-)
-- Aktuell werden noch Textausgaben in der Konsole gemacht, die nicht mehr gebraucht werden.
 - Wenn die Dateipfade zu lang werden kann man nur noch den Anfang lesen: Scrollbalken wären noch gut
-- Es wird noch nicht berücksichtigt, dass die Config-Datei nicht da sein könnte
-- Die Shortcuts, die ins Eingabefeld eingegeben werden können (direkt) werden noch nicht gegengecheckt.
 - Sicher noch einiges mehr.
