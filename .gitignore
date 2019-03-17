@@ -17,3 +17,10 @@ cur/
 tmp/
 __pycache__/
 *.DS_Store
+.idea/
+tests/
+qtgui/
+data/PYSB.kra
+.directory
+venv/
+tkinter-test.py
